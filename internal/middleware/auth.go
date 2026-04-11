@@ -35,6 +35,30 @@ func Auth() gin.HandlerFunc {
 	}
 }
 
+// OptionalAuth memvalidasi JWT token jika ada, namun tetap membiarkan tamu lewat jika token absen.
+func OptionalAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.Next()
+			return
+		}
+
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+			return JWTKey, nil
+		})
+		
+		if err == nil && token.Valid {
+			if claims, ok := token.Claims.(jwt.MapClaims); ok {
+				c.Set("userID", uint(claims["sub"].(float64)))
+				c.Set("userRole", claims["role"].(string))
+			}
+		}
+		c.Next()
+	}
+}
+
 // AdminOnly memastikan user yang login memiliki role "admin".
 func AdminOnly() gin.HandlerFunc {
 	return func(c *gin.Context) {

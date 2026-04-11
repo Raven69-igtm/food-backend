@@ -34,7 +34,7 @@ func Setup() *gin.Engine {
 	r.POST("/api/register", handler.Register)
 	r.POST("/api/login", handler.Login)
 	r.GET("/api/foods", handler.GetProducts)
-	r.POST("/api/orders", handler.CreateOrder)
+	r.POST("/api/orders", middleware.OptionalAuth(), handler.CreateOrder)
 
 	// --- PROTECTED ROUTES (Butuh Login) ---
 	api := r.Group("/api")
@@ -43,6 +43,9 @@ func Setup() *gin.Engine {
 		api.GET("/profile", handler.GetProfile)
 		api.PUT("/profile", handler.UpdateProfile)
 		api.GET("/orders", handler.GetUserOrders)
+		api.GET("/user/orders", handler.GetUserOrders) // Rute baru untuk mengambil daftar pesanan milik user
+		api.GET("/notifications", handler.GetUserNotifications)
+		api.PUT("/notifications/:id/read", handler.MarkNotificationRead)
 		api.POST("/ask-ai", handler.AskAI)
 
 		// --- KHUSUS ADMIN ROUTES ---
