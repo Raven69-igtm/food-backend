@@ -34,8 +34,8 @@ func ConnectDatabase() {
 
 	// Perbaikan Data Lama:
 	// Karena sebelumnya UserID adalah `uint` (tidak nullable, default 0),
-	// kita perlu mengubah `user_id` yang 0 menjadi NULL agar tidak bentrok dengan Foreign Key pengguna
-	//database.Exec("ALTER TABLE orders MODIFY user_id bigint unsigned NULL;")
+	///kita perlu mengubah `user_id` yang 0 menjadi NULL agar tidak bentrok dengan Foreign Key pengguna
+	///database.Exec("ALTER TABLE orders MODIFY user_id bigint unsigned NULL;")
 	//database.Exec("UPDATE orders SET user_id = NULL WHERE user_id = 0;")
 	// Hapus constraint jika sudah terlanjur bermasalah
 	//database.Exec("ALTER TABLE orders DROP FOREIGN KEY fk_orders_user;") // Akan di-ignore MySQL jika tidak eksis
