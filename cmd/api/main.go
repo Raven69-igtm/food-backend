@@ -4,6 +4,7 @@ import (
 	"food-backend/internal/config"
 	"food-backend/internal/router"
 	"log"
+	"os"
 )
 
 func main() {
@@ -13,9 +14,14 @@ func main() {
 	// Setup Router (Gin)
 	r := router.Setup()
 
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	// Jalankan Server
-	log.Println("server running on :8080")
-	if err := r.Run(":8080"); err != nil {
+	log.Printf("server running on :%s\n", port)
+	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("failed to start server: %v", err)
 	}
 }
