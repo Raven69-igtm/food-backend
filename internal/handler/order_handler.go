@@ -56,7 +56,7 @@ func CreateOrder(c *gin.Context) {
 		return
 	}
 
-	// Loop dan save OrderItems (jangan diubah kalau sudah ada)
+	// Loop dan save OrderItems
 	for _, item := range input.Items {
 		orderItem := models.OrderItem{
 			OrderID:   order.ID,
@@ -65,6 +65,11 @@ func CreateOrder(c *gin.Context) {
 			Price:     item.Price,
 		}
 		config.DB.Create(&orderItem)
+
+		// 📉 KURANGI STOK PRODUK SECARA OTOMATIS
+		config.DB.Model(&models.Product{}).
+			Where("id = ? AND stock >= ?", item.ProductID, item.Quantity).
+			UpdateColumn("stock", config.DB.Raw("stock - ?", item.Quantity))
 	}
 
 	c.JSON(200, gin.H{

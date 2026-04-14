@@ -9,6 +9,7 @@ type Product struct {
 	Rating       float64 `json:"rating"`
 	Category     string  `json:"category"`
 	IsBestseller bool    `json:"is_bestseller"`
+	Stock        int     `json:"stock"`
 }
 
 func (Product) TableName() string {
