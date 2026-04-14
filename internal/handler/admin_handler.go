@@ -25,9 +25,25 @@ func GetDashboardStats(c *gin.Context) {
 		Where("created_at >= ?", time.Now().AddDate(0, 0, -30)).
 		Count(&totalUsers)
 
+	// Mengambil data penjualan harian selama 14 hari terakhir
+	type DailyStat struct {
+		Date    string  `json:"date"`
+		Revenue float64 `json:"revenue"`
+	}
+	var dailyStats []DailyStat
+
+	// Query untuk mengambil total revenue per hari
+	config.DB.Model(&models.Order{}).
+		Where("status != ? AND created_at >= ?", "Cancelled", time.Now().AddDate(0, 0, -14)).
+		Select("DATE(created_at) as date, SUM(total) as revenue").
+		Group("DATE(created_at)").
+		Order("date ASC").
+		Scan(&dailyStats)
+
 	c.JSON(200, gin.H{
 		"revenue":     totalRevenue,
 		"total_order": totalOrders,
 		"new_users":   totalUsers,
+		"daily_stats": dailyStats,
 	})
 }
