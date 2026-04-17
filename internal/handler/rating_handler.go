@@ -61,10 +61,7 @@ func AddRating(c *gin.Context) {
 
 	// Update rata-rata rating produk
 	var avgRating float64
-	config.DB.Model(&models.Rating{}).
-		Where("product_id = ?", product.ID).
-		Select("COALESCE(AVG(rating), 0)").
-		Scan(&avgRating)
+	config.DB.Raw("SELECT COALESCE(AVG(rating), 0) FROM ratings WHERE product_id = ?", product.ID).Scan(&avgRating)
 
 	config.DB.Model(&product).Update("rating", avgRating)
 

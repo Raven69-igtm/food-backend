@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"math/rand"
 	"food-backend/internal/config"
 	"food-backend/internal/models"
 	"strings"
@@ -39,7 +40,17 @@ func CreateOrder(c *gin.Context) {
 		return
 	}
 
+	// Generate random 4-char string (A-Z)
+	rand.Seed(time.Now().UnixNano())
+	letters := []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+	b := make([]rune, 4)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	orderRef := "ORD-" + string(b)
+
 	order := models.Order{
+		OrderRef:     orderRef,
 		UserID:       userIDPtr,
 		GuestName:    input.GuestName,
 		GuestPhone:   input.GuestPhone,
@@ -69,8 +80,9 @@ func CreateOrder(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{
-		"message":  "Order berhasil dibuat",
-		"order_id": order.ID,
+		"message":   "Order berhasil dibuat",
+		"order_id":  order.ID,
+		"order_ref": order.OrderRef,
 	})
 }
 
@@ -171,6 +183,39 @@ func DeleteUserOrder(c *gin.Context) {
 	config.DB.Delete(&order)
 
 	c.JSON(200, gin.H{"message": "Riwayat pesanan berhasil dihapus"})
+}
+
+// DeleteAllUserOrders menghapus seluruh riwayat pesanan (completed/cancelled) milik user.
+func DeleteAllUserOrders(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var orders []models.Order
+	if err := config.DB.Where("user_id = ? AND status IN ?", userID, []string{"completed", "done", "cancelled"}).Find(&orders).Error; err != nil {
+		c.JSON(500, gin.H{"error": "Gagal mencari daftar pesanan yang bisa dihapus"})
+		return
+	}
+
+	if len(orders) == 0 {
+		c.JSON(200, gin.H{"message": "Tidak ada riwayat untuk dihapus"})
+		return
+	}
+
+	// Kumpulkan ID order yang akan dihapus
+	var orderIDs []uint
+	for _, o := range orders {
+		orderIDs = append(orderIDs, o.ID)
+	}
+
+	// Hapus order_items terkait terlebih dahulu
+	config.DB.Where("order_id IN ?", orderIDs).Delete(&models.OrderItem{})
+	// Hapus orders
+	config.DB.Where("id IN ?", orderIDs).Delete(&models.Order{})
+
+	c.JSON(200, gin.H{"message": "Semua riwayat pesanan berhasil dihapus"})
 }
 
 // GetAllOrders mengambil semua order (admin only).

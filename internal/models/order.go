@@ -4,6 +4,7 @@ import "time"
 
 type Order struct {
 	ID           uint      `gorm:"primaryKey" json:"id"`
+	OrderRef     string    `json:"order_ref"`
 	UserID       *uint     `json:"user_id"` // nullable agar tamu masih bisa beli
 	GuestName    string    `json:"guest_name"`
 	GuestPhone   string    `json:"guest_phone"`

@@ -49,11 +49,13 @@ func Setup() *gin.Engine {
 		// Pesanan user
 		api.GET("/orders", handler.GetUserOrders)
 		api.GET("/user/orders", handler.GetUserOrders)
+		api.DELETE("/user/orders/all", handler.DeleteAllUserOrders) // Hapus semua riwayat (user)
 		api.PUT("/orders/:id/cancel", handler.CancelOrder)   // Batalkan pesanan (user)
 		api.DELETE("/orders/:id", handler.DeleteUserOrder)   // Hapus riwayat pesanan (user)
 
 		// Notifikasi
 		api.GET("/notifications", handler.GetUserNotifications)
+		api.DELETE("/notifications/all", handler.DeleteAllNotifications) // Hapus semua notifikasi (user)
 		api.PUT("/notifications/:id/read", handler.MarkNotificationRead)
 		api.DELETE("/notifications/:id", handler.DeleteNotification) // Hapus notifikasi (user)
 

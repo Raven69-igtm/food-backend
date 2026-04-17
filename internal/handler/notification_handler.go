@@ -64,3 +64,20 @@ func DeleteNotification(c *gin.Context) {
 
 	c.JSON(200, gin.H{"message": "Notifikasi berhasil dihapus"})
 }
+
+// DeleteAllNotifications menghapus seluruh notifikasi milik user
+func DeleteAllNotifications(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	result := config.DB.Where("user_id = ?", userID).Delete(&models.Notification{})
+	if result.Error != nil {
+		c.JSON(500, gin.H{"error": "Gagal menghapus notifikasi"})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Semua notifikasi berhasil dihapus"})
+}
