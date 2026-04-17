@@ -14,16 +14,11 @@ func GetDashboardStats(c *gin.Context) {
 	var totalOrders int64
 	var totalUsers int64
 
-	config.DB.Model(&models.Order{}).
-		Where("status != ?", "Cancelled").
-		Select("COALESCE(SUM(total), 0)").
-		Scan(&totalRevenue)
+	config.DB.Raw("SELECT COALESCE(SUM(total), 0) FROM orders WHERE LOWER(status) != 'cancelled' AND LOWER(status) != 'pending'").Scan(&totalRevenue)
 
-	config.DB.Model(&models.Order{}).Count(&totalOrders)
+	config.DB.Raw("SELECT COUNT(id) FROM orders").Scan(&totalOrders)
 
-	config.DB.Model(&models.User{}).
-		Where("created_at >= ?", time.Now().AddDate(0, 0, -30)).
-		Count(&totalUsers)
+	config.DB.Raw("SELECT COUNT(id) FROM users WHERE created_at >= ?", time.Now().AddDate(0, 0, -30)).Scan(&totalUsers)
 
 	// Mengambil data penjualan harian selama 14 hari terakhir
 	type DailyStat struct {
