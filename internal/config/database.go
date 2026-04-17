@@ -46,6 +46,7 @@ func ConnectDatabase() {
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Notification{},
+		&models.Rating{},
 	); err != nil {
 		log.Fatalf("auto-migration failed: %v", err)
 	}

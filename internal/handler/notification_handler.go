@@ -41,3 +41,26 @@ func MarkNotificationRead(c *gin.Context) {
 
 	c.JSON(200, gin.H{"message": "Notifikasi ditandai dibaca"})
 }
+
+// DeleteNotification menghapus satu notifikasi milik user
+func DeleteNotification(c *gin.Context) {
+	id := c.Param("id")
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	// Pastikan notifikasi milik user yang login
+	result := config.DB.Where("id = ? AND user_id = ?", id, userID).Delete(&models.Notification{})
+	if result.Error != nil {
+		c.JSON(500, gin.H{"error": "Gagal menghapus notifikasi"})
+		return
+	}
+	if result.RowsAffected == 0 {
+		c.JSON(404, gin.H{"error": "Notifikasi tidak ditemukan"})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Notifikasi berhasil dihapus"})
+}
