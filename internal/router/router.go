@@ -45,6 +45,7 @@ func Setup() *gin.Engine {
 		// Profil
 		api.GET("/profile", handler.GetProfile)
 		api.PUT("/profile", handler.UpdateProfile)
+		api.POST("/profile/photo", handler.UploadProfilePhoto)
 
 		// Pesanan user
 		api.GET("/orders", handler.GetUserOrders)
