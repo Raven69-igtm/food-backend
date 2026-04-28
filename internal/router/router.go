@@ -35,6 +35,9 @@ func Setup() *gin.Engine {
 	// --- PUBLIC ROUTES ---
 	r.POST("/api/register", handler.Register)
 	r.POST("/api/login", handler.Login)
+	r.POST("/api/demo-login", handler.DemoLogin)
+	r.POST("/api/forgot-password", handler.ForgotPassword)
+	r.POST("/api/reset-password", handler.ResetPassword)
 	r.GET("/api/foods", handler.GetProducts)
 	r.POST("/api/orders", middleware.OptionalAuth(), handler.CreateOrder)
 
