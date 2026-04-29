@@ -275,3 +275,48 @@ func UpdateOrderStatus(c *gin.Context) {
 
 	c.JSON(200, gin.H{"message": "Order Updated"})
 }
+
+// AdminDeleteOrder menghapus satu pesanan (admin only).
+func AdminDeleteOrder(c *gin.Context) {
+	id := c.Param("id")
+
+	var order models.Order
+	if err := config.DB.First(&order, id).Error; err != nil {
+		c.JSON(404, gin.H{"error": "Order tidak ditemukan"})
+		return
+	}
+
+	// Hapus items terkait
+	config.DB.Where("order_id = ?", order.ID).Delete(&models.OrderItem{})
+	// Hapus order
+	config.DB.Delete(&order)
+
+	c.JSON(200, gin.H{"message": "Order berhasil dihapus oleh admin"})
+}
+
+// AdminDeleteFinishedOrders menghapus semua riwayat pesanan yang sudah selesai/dibatalkan (admin only).
+func AdminDeleteFinishedOrders(c *gin.Context) {
+	var orders []models.Order
+	// Ambil semua order dengan status selesai atau dibatalkan
+	if err := config.DB.Where("status IN ?", []string{"completed", "done", "cancelled"}).Find(&orders).Error; err != nil {
+		c.JSON(500, gin.H{"error": "Gagal mencari daftar pesanan yang bisa dihapus"})
+		return
+	}
+
+	if len(orders) == 0 {
+		c.JSON(200, gin.H{"message": "Tidak ada riwayat pesanan yang bisa dihapus"})
+		return
+	}
+
+	var orderIDs []uint
+	for _, o := range orders {
+		orderIDs = append(orderIDs, o.ID)
+	}
+
+	// Hapus order_items terkait
+	config.DB.Where("order_id IN ?", orderIDs).Delete(&models.OrderItem{})
+	// Hapus orders
+	config.DB.Where("id IN ?", orderIDs).Delete(&models.Order{})
+
+	c.JSON(200, gin.H{"message": "Semua riwayat pesanan selesai berhasil dihapus"})
+}

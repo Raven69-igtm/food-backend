@@ -75,6 +75,8 @@ func Setup() *gin.Engine {
 			admin.GET("/stats", handler.GetDashboardStats)
 			admin.GET("/orders", handler.GetAllOrders)
 			admin.PUT("/orders/:id", handler.UpdateOrderStatus)
+			admin.DELETE("/orders/:id", handler.AdminDeleteOrder)
+			admin.DELETE("/orders/finished", handler.AdminDeleteFinishedOrders)
 			admin.GET("/users", handler.GetAllUsers)
 
 			admin.POST("/foods", handler.CreateProduct)
