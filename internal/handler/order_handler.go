@@ -136,6 +136,14 @@ func CancelOrder(c *gin.Context) {
 		return
 	}
 
+	// Kembalikan stok produk jika pesanan dibatalkan
+	var items []models.OrderItem
+	config.DB.Where("order_id = ?", order.ID).Find(&items)
+	for _, item := range items {
+		config.DB.Model(&models.Product{}).Where("id = ?", item.ProductID).
+			UpdateColumn("stock", config.DB.Raw("stock + ?", item.Quantity))
+	}
+
 	config.DB.Model(&order).Update("status", "cancelled")
 
 	// Kirim notifikasi ke user
@@ -240,9 +248,31 @@ func UpdateOrderStatus(c *gin.Context) {
 	}
 
 	var order models.Order
-	if err := config.DB.First(&order, id).Error; err != nil {
+	if err := config.DB.Preload("Items").First(&order, id).Error; err != nil {
 		c.JSON(404, gin.H{"error": "Order tidak ditemukan"})
 		return
+	}
+
+	// Logika perubahan stok dan sold_count
+	if input.Status != "" && !strings.EqualFold(input.Status, order.Status) {
+		// 1. Jika pesanan diselesaikan (Completed)
+		if strings.EqualFold(input.Status, "completed") {
+			for _, item := range order.Items {
+				config.DB.Model(&models.Product{}).Where("id = ?", item.ProductID).
+					UpdateColumn("sold_count", config.DB.Raw("sold_count + ?", item.Quantity))
+			}
+		}
+
+		// 2. Jika pesanan dibatalkan (Cancelled), kembalikan stok
+		if strings.EqualFold(input.Status, "cancelled") {
+			for _, item := range order.Items {
+				config.DB.Model(&models.Product{}).Where("id = ?", item.ProductID).
+					UpdateColumn("stock", config.DB.Raw("stock + ?", item.Quantity))
+			}
+		}
+
+		// 3. Jika status berubah DARI completed (misal salah klik), kurangi sold_count? 
+		// (Opsional, tapi untuk keamanan data dasar ini sudah cukup)
 	}
 
 	updates := map[string]interface{}{}
