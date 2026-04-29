@@ -10,6 +10,7 @@ type Product struct {
 	Category     string  `json:"category"`
 	IsBestseller bool    `json:"is_bestseller"`
 	Stock        int     `json:"stock"`
+	SoldCount    int     `json:"sold_count"`
 }
 
 func (Product) TableName() string {
