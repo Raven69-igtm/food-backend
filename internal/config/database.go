@@ -8,7 +8,7 @@ import (
 
 	"food-backend/internal/models"
 
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -27,7 +27,13 @@ func ConnectDatabase() {
 		},
 	}
 
-	database, err := gorm.Open(mysql.Open(dsn), gormCfg)
+	// Jika di Render, kita akan memakai DATABASE_URL langsung dari environment
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL != "" {
+		dsn = dbURL
+	}
+
+	database, err := gorm.Open(postgres.Open(dsn), gormCfg)
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
@@ -41,8 +47,9 @@ func ConnectDatabase() {
 	// database.Exec("ALTER TABLE orders DROP FOREIGN KEY fk_orders_user;") 
 	
 	// Backfill created_at untuk data lama agar muncul di grafik
-	// Menggunakan '2000-01-01' sebagai batas bawah karena MySQL strict mode benci '0000-00-00'
-	database.Exec("UPDATE `order` SET created_at = NOW() WHERE created_at IS NULL OR created_at < '2000-01-01'")
+	// Menggunakan '2000-01-01' sebagai batas bawah
+	// Postgres menggunakan tanda kutip ganda untuk identitas yang bentrok (seperti nama tabel order -> orders)
+	database.Exec(`UPDATE "orders" SET created_at = NOW() WHERE created_at IS NULL OR created_at < '2000-01-01'`)
 
 
 	if err := database.AutoMigrate(
@@ -62,7 +69,7 @@ func ConnectDatabase() {
 	}
 
 	// Sinkronisasi data lama: Set role 'admin' jika user ada di tabel admin
-	database.Exec("UPDATE user SET role = 'admin' WHERE id IN (SELECT id FROM admin)")
+	database.Exec(`UPDATE "users" SET role = 'admin' WHERE id IN (SELECT id FROM admins)`)
 
 	fmt.Println("database connection established successfully")
 	DB = database
@@ -71,14 +78,14 @@ func ConnectDatabase() {
 // buildDSN membangun string koneksi MySQL dari environment variable.
 func buildDSN() string {
 	host := getEnv("DB_HOST", "localhost")
-	port := getEnv("DB_PORT", "3306")
-	user := getEnv("DB_USER", "root")
+	port := getEnv("DB_PORT", "5432") // default port postgres
+	user := getEnv("DB_USER", "postgres")
 	password := getEnv("DB_PASSWORD", "")
 	dbname := getEnv("DB_NAME", "roti_515_db")
 
 	return fmt.Sprintf(
-		"%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local&tls=skip-verify",
-		user, password, host, port, dbname,
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Jakarta",
+		host, user, password, dbname, port,
 	)
 }
 
