@@ -36,20 +36,33 @@ func ConnectDatabase() {
 	// Karena sebelumnya UserID adalah `uint` (tidak nullable, default 0),
 	///kita perlu mengubah `user_id` yang 0 menjadi NULL agar tidak bentrok dengan Foreign Key pengguna
 	///database.Exec("ALTER TABLE orders MODIFY user_id bigint unsigned NULL;")
-	//database.Exec("UPDATE orders SET user_id = NULL WHERE user_id = 0;")
+	// database.Exec("UPDATE orders SET user_id = NULL WHERE user_id = 0;")
 	// Hapus constraint jika sudah terlanjur bermasalah
-	//database.Exec("ALTER TABLE orders DROP FOREIGN KEY fk_orders_user;") // Akan di-ignore MySQL jika tidak eksis
+	// database.Exec("ALTER TABLE orders DROP FOREIGN KEY fk_orders_user;") 
+	
+	// Backfill created_at untuk data lama agar muncul di grafik
+	// Menggunakan '2000-01-01' sebagai batas bawah karena MySQL strict mode benci '0000-00-00'
+	database.Exec("UPDATE `order` SET created_at = NOW() WHERE created_at IS NULL OR created_at < '2000-01-01'")
+
 
 	if err := database.AutoMigrate(
 		&models.User{},
+		&models.Admin{},
+		&models.Pelanggan{},
 		&models.Product{},
+		&models.JadwalAmbil{},
+		&models.Keranjang{},
+		&models.KeranjangDetail{},
 		&models.Order{},
-		&models.OrderItem{},
+		&models.OrderDetail{},
 		&models.Notification{},
 		&models.Rating{},
 	); err != nil {
 		log.Fatalf("auto-migration failed: %v", err)
 	}
+
+	// Sinkronisasi data lama: Set role 'admin' jika user ada di tabel admin
+	database.Exec("UPDATE user SET role = 'admin' WHERE id IN (SELECT id FROM admin)")
 
 	fmt.Println("database connection established successfully")
 	DB = database

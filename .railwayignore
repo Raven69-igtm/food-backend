@@ -1,0 +1,12 @@
+.git
+.idea
+.vscode
+*.exe
+*.dll
+*.so
+*.dylib
+*.log
+*.sqlite
+*.db
+tmp/
+vendor/

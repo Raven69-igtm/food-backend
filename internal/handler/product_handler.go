@@ -7,17 +7,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetProducts mengambil daftar produk dengan filter opsional category dan search.
+// GetProducts mengambil daftar produk dengan filter opsional search dan category.
 func GetProducts(c *gin.Context) {
-	category := c.Query("category")
 	search := c.Query("search")
+	category := c.Query("category")
 
 	db := config.DB.Model(&models.Product{})
-	if category != "" && category != "All" {
-		db = db.Where("LOWER(category) = LOWER(?)", category)
+
+	if category != "" {
+		db = db.Where("LOWER(kategori) = LOWER(?)", category)
 	}
+
 	if search != "" {
-		db = db.Where("LOWER(name) LIKE LOWER(?)", "%"+search+"%")
+		db = db.Where("LOWER(nama) LIKE LOWER(?)", "%"+search+"%")
 	}
 
 	var products []models.Product

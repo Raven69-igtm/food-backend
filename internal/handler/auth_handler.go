@@ -33,9 +33,11 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	role := user.Role
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub":  user.ID,
-		"role": user.Role,
+		"role": role,
 		"exp":  time.Now().Add(time.Hour * 24).Unix(),
 	})
 
@@ -47,13 +49,23 @@ func Login(c *gin.Context) {
 
 	c.JSON(200, gin.H{
 		"token": tokenStr,
-		"user":  user,
+		"user": gin.H{
+			"id":    user.ID,
+			"name":  user.Nama,
+			"email": user.Email,
+			"role":  role,
+		},
 	})
 }
 
-// Register membuat akun user baru dengan role default "user".
+// Register membuat akun pelanggan baru
 func Register(c *gin.Context) {
-	var input models.User
+	var input struct {
+		Name     string `json:"name"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		Phone    string `json:"phone"`
+	}
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(400, gin.H{"error": "Input tidak valid"})
 		return
@@ -64,17 +76,35 @@ func Register(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "Gagal memproses password"})
 		return
 	}
-	input.Password = string(hash)
 
-	if input.Role == "" {
-		input.Role = "user"
+	tx := config.DB.Begin()
+
+	user := models.User{
+		Nama:     input.Name,
+		Email:    input.Email,
+		Password: string(hash),
+		Role:     "pelanggan",
 	}
 
-	if err := config.DB.Create(&input).Error; err != nil {
+	if err := tx.Create(&user).Error; err != nil {
+		tx.Rollback()
 		c.JSON(500, gin.H{"error": "Gagal menyimpan user"})
 		return
 	}
 
+	pelanggan := models.Pelanggan{
+		ID:        user.ID,
+		NoHP:      input.Phone,
+		TglDaftar: time.Now(),
+	}
+
+	if err := tx.Create(&pelanggan).Error; err != nil {
+		tx.Rollback()
+		c.JSON(500, gin.H{"error": "Gagal menyimpan data pelanggan"})
+		return
+	}
+
+	tx.Commit()
 	c.JSON(200, gin.H{"message": "Registrasi Berhasil"})
 }
 
@@ -91,8 +121,11 @@ func ForgotPassword(c *gin.Context) {
 	}
 
 	var user models.User
-	// Verifikasi apakah ketiga data cocok
-	err := config.DB.Where("name = ? AND email = ? AND phone = ?", input.Name, input.Email, input.Phone).First(&user).Error
+	err := config.DB.Table("user").
+		Joins("JOIN pelanggan ON pelanggan.id = user.id").
+		Where("user.nama = ? AND user.email = ? AND pelanggan.no_hp = ?", input.Name, input.Email, input.Phone).
+		Select("user.*").
+		First(&user).Error
 	if err != nil {
 		c.JSON(401, gin.H{"error": "Identitas tidak ditemukan. Pastikan Nama, Email, dan No. HP sesuai."})
 		return
@@ -126,7 +159,6 @@ func ResetPassword(c *gin.Context) {
 		return
 	}
 
-	// Hash Password Baru
 	hash, err := bcrypt.GenerateFromPassword([]byte(input.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Gagal memproses password baru"})
@@ -141,3 +173,4 @@ func ResetPassword(c *gin.Context) {
 
 	c.JSON(200, gin.H{"message": "Password berhasil diperbarui, silakan login kembali"})
 }
+

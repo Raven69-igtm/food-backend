@@ -12,3 +12,7 @@ type Rating struct {
 	User    User    `json:"user" gorm:"foreignKey:UserID"`
 	Product Product `json:"product" gorm:"foreignKey:ProductID"`
 }
+
+func (Rating) TableName() string {
+	return "rating"
+}
