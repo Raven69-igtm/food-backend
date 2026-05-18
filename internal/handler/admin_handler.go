@@ -17,11 +17,11 @@ func GetDashboardStats(c *gin.Context) {
 
 	// Total revenue: hanya dari pesanan yang completed/done (bukan cancelled/pending)
 	config.DB.Raw(
-		"SELECT COALESCE(SUM(total), 0) FROM `order` WHERE LOWER(status) IN ('completed', 'done')",
+		`SELECT COALESCE(SUM(total), 0) FROM "orders" WHERE LOWER(status) IN ('completed', 'done')`,
 	).Scan(&totalRevenue)
 
 	// Total semua pesanan yang pernah masuk
-	config.DB.Raw("SELECT COUNT(id) FROM `order`").Scan(&totalOrders)
+	config.DB.Raw(`SELECT COUNT(id) FROM "orders"`).Scan(&totalOrders)
 
 	// Total User: hitung dari tabel user utama
 	config.DB.Model(&models.User{}).Count(&totalUsers)
@@ -44,12 +44,12 @@ func GetDashboardStats(c *gin.Context) {
 	var thisWeek, lastWeek WeekRevenue
 
 	config.DB.Raw(
-		"SELECT COALESCE(SUM(total),0) as revenue, COUNT(id) as orders FROM `order` WHERE LOWER(status) IN ('completed','done') AND created_at >= ?",
+		`SELECT COALESCE(SUM(total),0) as revenue, COUNT(id) as orders FROM "orders" WHERE LOWER(status) IN ('completed','done') AND created_at >= ?`,
 		startThisWeek,
 	).Scan(&thisWeek)
 
 	config.DB.Raw(
-		"SELECT COALESCE(SUM(total),0) as revenue, COUNT(id) as orders FROM `order` WHERE LOWER(status) IN ('completed','done') AND created_at >= ? AND created_at < ?",
+		`SELECT COALESCE(SUM(total),0) as revenue, COUNT(id) as orders FROM "orders" WHERE LOWER(status) IN ('completed','done') AND created_at >= ? AND created_at < ?`,
 		startLastWeek, startThisWeek,
 	).Scan(&lastWeek)
 
@@ -71,7 +71,7 @@ func GetDashboardStats(c *gin.Context) {
 	
 	// 1. Ambil data asli dari DB
 	var dbStats []DailyStat
-	config.DB.Table("`order`").
+	config.DB.Table(`"orders"`).
 		Where("LOWER(status) IN ('completed','done','processing','pending') AND created_at >= ?", now.AddDate(0, 0, -14)).
 		Select("DATE(created_at) as date, SUM(total) as revenue").
 		Group("DATE(created_at)").

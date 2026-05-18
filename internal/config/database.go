@@ -6,8 +6,6 @@ import (
 	"os"
 	"time"
 
-	"food-backend/internal/models"
-
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -49,9 +47,10 @@ func ConnectDatabase() {
 	// Backfill created_at untuk data lama agar muncul di grafik
 	// Menggunakan '2000-01-01' sebagai batas bawah
 	// Postgres menggunakan tanda kutip ganda untuk identitas yang bentrok (seperti nama tabel order -> orders)
-	database.Exec(`UPDATE "orders" SET created_at = NOW() WHERE created_at IS NULL OR created_at < '2000-01-01'`)
+	// database.Exec(`UPDATE "orders" SET created_at = NOW() WHERE created_at IS NULL OR created_at < '2000-01-01'`)
 
 
+	/*
 	if err := database.AutoMigrate(
 		&models.User{},
 		&models.Admin{},
@@ -67,9 +66,10 @@ func ConnectDatabase() {
 	); err != nil {
 		log.Fatalf("auto-migration failed: %v", err)
 	}
+	*/
 
 	// Sinkronisasi data lama: Set role 'admin' jika user ada di tabel admin
-	database.Exec(`UPDATE "users" SET role = 'admin' WHERE id IN (SELECT id FROM admins)`)
+	// database.Exec(`UPDATE "users" SET role = 'admin' WHERE id IN (SELECT id FROM admins)`)
 
 	fmt.Println("database connection established successfully")
 	DB = database
