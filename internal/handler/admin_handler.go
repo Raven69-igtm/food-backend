@@ -17,19 +17,18 @@ func GetDashboardStats(c *gin.Context) {
 
 	// Total revenue: hanya dari pesanan yang completed/done (bukan cancelled/pending)
 	config.DB.Raw(
-		`SELECT COALESCE(SUM(total), 0) FROM "orders" WHERE LOWER(status) IN ('completed', 'done')`,
+		`SELECT COALESCE(SUM(total), 0) FROM "order" WHERE LOWER(status) IN ('completed', 'done')`,
 	).Scan(&totalRevenue)
 
-	// Total semua pesanan yang pernah masuk
-	config.DB.Raw(`SELECT COUNT(id) FROM "orders"`).Scan(&totalOrders)
+	// Total pesanan yang sudah selesai (completed/done)
+	config.DB.Raw(`SELECT COUNT(id) FROM "order" WHERE LOWER(status) IN ('completed', 'done')`).Scan(&totalOrders)
 
 	// Total User: hitung dari tabel user utama
 	config.DB.Model(&models.User{}).Count(&totalUsers)
 
-	// Pelanggan baru: tetap dari tabel pelanggan untuk mendapatkan tgl_daftar (jika ingin spesifik pelanggan)
-	// Namun di sini kita gunakan user saja agar sinkron
+	// Pelanggan baru 30 hari terakhir
 	var totalNewUsers int64
-	config.DB.Model(&models.User{}).Where("id IN (SELECT id FROM pelanggan WHERE tgl_daftar >= ?)", time.Now().AddDate(0, 0, -30)).Count(&totalNewUsers)
+	config.DB.Model(&models.Pelanggan{}).Where("tgl_daftar >= ?", time.Now().AddDate(0, 0, -30)).Count(&totalNewUsers)
 
 	// --- Growth Mingguan ---
 	// Bandingkan revenue minggu ini vs minggu lalu untuk menghitung pertumbuhan
@@ -44,12 +43,12 @@ func GetDashboardStats(c *gin.Context) {
 	var thisWeek, lastWeek WeekRevenue
 
 	config.DB.Raw(
-		`SELECT COALESCE(SUM(total),0) as revenue, COUNT(id) as orders FROM "orders" WHERE LOWER(status) IN ('completed','done') AND created_at >= ?`,
+		`SELECT COALESCE(SUM(total),0) as revenue, COUNT(id) as orders FROM "order" WHERE LOWER(status) IN ('completed','done') AND created_at >= ?`,
 		startThisWeek,
 	).Scan(&thisWeek)
 
 	config.DB.Raw(
-		`SELECT COALESCE(SUM(total),0) as revenue, COUNT(id) as orders FROM "orders" WHERE LOWER(status) IN ('completed','done') AND created_at >= ? AND created_at < ?`,
+		`SELECT COALESCE(SUM(total),0) as revenue, COUNT(id) as orders FROM "order" WHERE LOWER(status) IN ('completed','done') AND created_at >= ? AND created_at < ?`,
 		startLastWeek, startThisWeek,
 	).Scan(&lastWeek)
 
@@ -71,7 +70,7 @@ func GetDashboardStats(c *gin.Context) {
 	
 	// 1. Ambil data asli dari DB
 	var dbStats []DailyStat
-	config.DB.Table(`"orders"`).
+	config.DB.Table(`"order"`).
 		Where("LOWER(status) IN ('completed','done','processing','pending') AND created_at >= ?", now.AddDate(0, 0, -14)).
 		Select("DATE(created_at) as date, SUM(total) as revenue").
 		Group("DATE(created_at)").
@@ -111,7 +110,7 @@ func GetDashboardStats(c *gin.Context) {
 	}
 	var activities []Activity
 
-	// Ambil 5 pesanan terbaru (menggunakan Preload User agar nama pasti ada)
+	// Ambil 5 pesanan terbaru
 	var recentOrders []models.Order
 	config.DB.Preload("User").Order("created_at DESC").Limit(5).Find(&recentOrders)
 	for _, o := range recentOrders {
@@ -151,7 +150,7 @@ func GetDashboardStats(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"revenue":       totalRevenue,
 		"total_order":   totalOrders,
-		"new_users":     totalUsers,
+		"new_users":     totalNewUsers,
 		"sales_growth":  salesGrowth,
 		"orders_growth": ordersGrowth,
 		"users_growth":  usersGrowth,
